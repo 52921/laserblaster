@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+
+<!-- SEO START -->
+<title>Sarthak AI Laser Blaster - Free Online Browser Game</title>
+
+<meta name="description" content="Play Sarthak AI Laser Blaster free online in your browser. Shoot glowing targets with futuristic laser effects in this fast-paced cyber arcade game." />
+
+<meta name="keywords" content="Sarthak AI Laser Blaster, online game, browser game, laser shooting game, cyber game, free HTML game" />
+
+<meta name="robots" content="index, follow" />
+
+<meta name="author" content="Sarthak" />
+
+<meta property="og:title" content="Sarthak AI Laser Blaster" />
+<meta property="og:description" content="Free futuristic laser shooting browser game created by Sarthak." />
+<meta property="og:type" content="website" />
+
+<link rel="canonical" href="https://YOURUSERNAME.github.io/YOUR-REPO/" />
+<!-- SEO END -->
+
+<style>
+  :root{
+    --cyan:#00ffff;
+    --bg1:#02060a;
+    --bg2:#08121b;
+  }
+
+  html,body{
+    margin:0;
+    height:100%;
+    background:radial-gradient(circle at 25% 10%,var(--bg2),var(--bg1));
+    font-family:Inter,Arial;
+    overflow:hidden;
+  }
+
+  h1{
+    color:var(--cyan);
+    margin:0;
+    text-shadow:0 0 10px rgba(0,255,255,.3)
+  }
+
+  #score,#lives{
+    color:#bff;
+    font-weight:600;
+    margin-top:5px
+  }
+
+  header{
+    position:absolute;
+    left:16px;
+    top:12px;
+    z-index:40
+  }
+
+  #controls{
+    position:absolute;
+    right:16px;
+    top:12px;
+    z-index:40;
+    display:flex;
+    gap:10px
+  }
+
+  button{
+    background:var(--cyan);
+    border:none;
+    padding:8px 16px;
+    border-radius:999px;
+    cursor:pointer;
+    font-weight:600;
+    box-shadow:0 0 15px rgba(0,255,255,.3);
+  }
+
+  #gameCanvas{
+    display:block;
+    width:100vw;
+    height:100vh;
+  }
+
+  #centerMsg{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    text-align:center;
+    z-index:50;
+    color:#eafcff
+  }
+
+  .box{
+    background:rgba(0,0,0,.5);
+    padding:20px 30px;
+    border-radius:15px;
+    backdrop-filter:blur(5px);
+  }
+
+  /* SEO CONTENT */
+  .seo-content{
+    position:absolute;
+    left:-9999px;
+    top:-9999px;
+    opacity:0;
+    pointer-events:none;
+  }
+</style>
+</head>
+
+<body>
+
+<!-- SEO TEXT -->
+<div class="seo-content">
+  <h1>Sarthak AI Laser Blaster</h1>
+
+  <p>
+    Sarthak AI Laser Blaster is a futuristic free online browser game.
+    Players shoot glowing targets using laser beams in a cyber-style arcade world.
+    This HTML5 shooting game works directly in modern browsers without download.
+  </p>
+</div>
+
+<header>
+  <h1>🤖 Sarthak AI Laser Blaster</h1>
+  <div id="score">Score: 0</div>
+  <div id="lives">Lives: 3</div>
+</header>
+
+<div id="controls">
+  <button id="startBtn">Start</button>
+  <button id="restartBtn" style="display:none">Restart</button>
+</div>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="centerMsg">
+  <div class="box">
+    <h2>Click “Start” to Play</h2>
+    <p>
+      Tap bubbles to shoot laser beams.
+      <br>
+      Miss 3 and game over!
+    </p>
+  </div>
+</div>
+
+<script>
+(() => {
+
+const canvas=document.getElementById('gameCanvas');
+const ctx=canvas.getContext('2d');
+
+let DPR=window.devicePixelRatio||1;
+
+function resize(){
+  DPR=window.devicePixelRatio||1;
+
+  canvas.width=innerWidth*DPR;
+  canvas.height=innerHeight*DPR;
+
+  canvas.style.width=innerWidth+'px';
+  canvas.style.height=innerHeight+'px';
+
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+
+resize();
+addEventListener('resize',resize);
+
+let targets=[];
+let lasers=[];
+let score=0;
+let lives=3;
+let gameOver=false;
+let running=false;
+
+let lastSpawn=0;
+let spawnInterval=1300;
+let rafId=null;
+
+function spawnTarget(){
+
+  const r=25+Math.random()*20;
+  const x=r+Math.random()*(innerWidth-2*r);
+  const y=-r;
+
+  const vy=0.5+Math.random()*0.7;
+
+  const color=[
+    '#00ffff',
+    '#00ff99',
+    '#ff88ff',
+    '#ffaa44'
+  ][Math.floor(Math.random()*4)];
+
+  targets.push({
+    x,y,r,vy,color,hit:false
+  });
+}
+
+function drawBg(){
+
+  const g=ctx.createLinearGradient(
+    0,
+    0,
+    0,
+    canvas.height/DPR
+  );
+
+  g.addColorStop(0,'#061018');
+  g.addColorStop(1,'#020409');
+
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,innerWidth,innerHeight);
+}
+
+function drawTargets(){
+
+  for(const t of targets){
+
+    if(t.hit){
+
+      t.r += 3;
+      t.alpha -= 0.07;
+
+      if(t.alpha <= 0){
+        targets.splice(targets.indexOf(t),1);
+      }
+
+      ctx.beginPath();
+
+      ctx.arc(
+        t.x,
+        t.y,
+        t.r,
+        0,
+        Math.PI*2
+      );
+
+      ctx.fillStyle=`rgba(255,255,255,${t.alpha})`;
+      ctx.fill();
+
+    }else{
+
+      ctx.beginPath();
+
+      ctx.arc(
+        t.x,
+        t.y,
+        t.r,
+        0,
+        Math.PI*2
+      );
+
+      ctx.fillStyle=t.color;
+      ctx.shadowColor=t.color;
+      ctx.shadowBlur=15;
+
+      ctx.fill();
+
+      ctx.shadowBlur=0;
+    }
+  }
+}
+
+function drawLasers(){
+
+  lasers.forEach((l,i)=>{
+
+    ctx.beginPath();
+
+    ctx.strokeStyle='#00ffff';
+    ctx.lineWidth=2;
+
+    ctx.shadowColor='#00ffff';
+    ctx.shadowBlur=10;
+
+    ctx.moveTo(l.x1,l.y1);
+    ctx.lineTo(l.x2,l.y2);
+
+    ctx.stroke();
+
+    ctx.shadowBlur=0;
+
+    l.alpha -= 0.1;
+
+    if(l.alpha<=0){
+      lasers.splice(i,1);
+    }
+  });
+}
+
+function step(ts){
+
+  drawBg();
+
+  const now=Date.now();
+
+  if(running && now-lastSpawn>spawnInterval){
+
+    spawnTarget();
+
+    lastSpawn=now;
+
+    if(spawnInterval>800){
+      spawnInterval-=10;
+    }
+  }
+
+  for(const t of targets){
+
+    if(!t.hit){
+      t.y+=t.vy;
+    }
+  }
+
+  for(let i=targets.length-1;i>=0;i--){
+
+    const t=targets[i];
+
+    if(!t.hit && t.y>innerHeight+t.r){
+
+      targets.splice(i,1);
+
+      lives--;
+
+      document.getElementById('lives').textContent="Lives: "+lives;
+
+      if(lives<=0){
+        endGame();
+      }
+    }
+  }
+
+  drawTargets();
+  drawLasers();
+
+  rafId=requestAnimationFrame(step);
+}
+
+canvas.addEventListener('click',e=>{
+
+  if(!running)return;
+
+  const rect=canvas.getBoundingClientRect();
+
+  const x=e.clientX-rect.left;
+  const y=e.clientY-rect.top;
+
+  let hit=false;
+
+  for(let i=targets.length-1;i>=0;i--){
+
+    const t=targets[i];
+
+    const dx=x-t.x;
+    const dy=y-t.y;
+
+    if(!t.hit && Math.sqrt(dx*dx+dy*dy)<=t.r){
+
+      t.hit=true;
+      t.alpha=1;
+
+      hit=true;
+
+      lasers.push({
+        x1:innerWidth/2,
+        y1:innerHeight,
+        x2:t.x,
+        y2:t.y,
+        alpha:1
+      });
+
+      score++;
+
+      document.getElementById('score').textContent="Score: "+score;
+
+      break;
+    }
+  }
+
+  if(!hit){
+
+    lasers.push({
+      x1:innerWidth/2,
+      y1:innerHeight,
+      x2:x,
+      y2:y,
+      alpha:1
+    });
+  }
+});
+
+function startGame(){
+
+  score=0;
+  lives=3;
+
+  spawnInterval=1300;
+
+  targets=[];
+  lasers=[];
+
+  gameOver=false;
+
+  document.getElementById('score').textContent="Score: 0";
+  document.getElementById('lives').textContent="Lives: 3";
+
+  document.getElementById('centerMsg').style.display='none';
+
+  document.getElementById('startBtn').style.display='none';
+
+  document.getElementById('restartBtn').style.display='inline-block';
+
+  running=true;
+
+  cancelAnimationFrame(rafId);
+
+  rafId=requestAnimationFrame(step);
+}
+
+function endGame(){
+
+  running=false;
+
+  gameOver=true;
+
+  cancelAnimationFrame(rafId);
+
+  document.getElementById('centerMsg').innerHTML=
+  `
+  <div class="box">
+    <h2>💥 Game Over!</h2>
+    <p>Your Score: <b>${score}</b></p>
+    <p>Click “Restart” to play again.</p>
+  </div>
+  `;
+
+  document.getElementById('centerMsg').style.display='block';
+}
+
+document.getElementById('startBtn').onclick=startGame;
+document.getElementById('restartBtn').onclick=startGame;
+
+drawBg();
+
+})();
+</script>
+
+</body>
+</html>
